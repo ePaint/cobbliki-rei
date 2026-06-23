@@ -46,6 +46,18 @@ unavailable; in singleplayer/LAN it's complete.
 ./gradlew build   # -> build/libs/cobbliki-rei-<version>.jar
 ```
 
+## Releasing (maintainers)
+
+Bump `modVersion` in `gradle.properties`, then:
+
+```bash
+gh release create v<version> build/libs/cobbliki-rei-<version>.jar --repo ePaint/cobbliki-rei
+uv run tools/modrinth_publish.py          # publishes to Modrinth (beta); --release for release type
+```
+
+`modrinth_publish.py` reads `MODRINTH_API_TOKEN` (env var or a sibling `.env`), builds if needed,
+skips versions that already exist, keeps the project client-side, and uploads with dependencies.
+
 ## Credits
 
 - The **CobbleDollar coin** icon (`assets/cobbliki_rei/textures/gui/cobbledollar.png`) is derived from
