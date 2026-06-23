@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "cobbliki_rei",
+  "version": "${version}",
+  "name": "Cobbliki REI",
+  "description": "REI integration for Cobblemon: look up defeat drops, pasture loot, TM/move compatibility (per form), evolutions, evolution items, mega evolution, fossil resurrection, and CobbleDollars shop prices — all read live from your installed content.",
+  "authors": ["ePaint"],
+  "contact": {
+    "homepage": "https://github.com/ePaint/cobbliki-rei",
+    "sources": "https://github.com/ePaint/cobbliki-rei",
+    "issues": "https://github.com/ePaint/cobbliki-rei/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/cobbliki_rei/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      {
+        "adapter": "kotlin",
+        "value": "com.cobbliki.rei.CobblikiRei"
+      }
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "com.cobbliki.rei.CobblikiReiClient"
+      }
+    ],
+    "rei_client": [
+      "com.cobbliki.rei.CobblikiReiPlugin"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*",
+    "cobblemon": ">=1.7.1",
+    "roughlyenoughitems": "*"
+  },
+  "recommends": {
+    "cobbledollars": "*",
+    "tmcraft": "*",
+    "mega_showdown": "*",
+    "pasture-loot": "*"
+  }
+}
