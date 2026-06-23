@@ -1,5 +1,7 @@
 package com.cobbliki.rei
 
+import com.cobbliki.rei.data.EconomyData
+import com.cobbliki.rei.data.LiveShop
 import com.cobbliki.rei.data.PastureConfig
 import com.cobbliki.rei.data.PokemonData
 import net.fabricmc.api.ClientModInitializer
@@ -21,6 +23,15 @@ object CobblikiReiClient : ClientModInitializer {
                         Text.literal(
                             "Cobbliki REI: ${all.size} species, $withDrops con drops, " +
                                 "$withTm con MTs; pastureLoot=${PastureConfig.present} blacklist=$bl"
+                        )
+                    )
+                    val live = LiveShop.buyOffers()
+                    val eff = EconomyData.buyOffers()
+                    val cats = live.map { it.category }.distinct()
+                    ctx.source.sendFeedback(
+                        Text.literal(
+                            "Economy: present=${EconomyData.present} liveBuy=${live.size} effectiveBuy=${eff.size} " +
+                                "liveSell=${LiveShop.sellOffers().size} cats=$cats"
                         )
                     )
                     1

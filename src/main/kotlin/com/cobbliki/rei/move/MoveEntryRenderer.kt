@@ -23,9 +23,7 @@ object MoveEntryRenderer : EntryRenderer<MoveInfo> {
     override fun getTooltip(entry: EntryStack<MoveInfo>, context: TooltipContext): Tooltip? {
         val move = entry.value ?: return null
         val lines = mutableListOf<Text>(move.displayName)
-        val type = move.type.replaceFirstChar { it.uppercase() }
-        val cat = move.category.replaceFirstChar { it.uppercase() }
-        lines.add(Text.literal("$type · $cat").formatted(Formatting.GRAY))
+        lines.add(Text.empty().append(move.typeName).append(" · ").append(move.categoryName).formatted(Formatting.GRAY))
         val pow = if (move.power > 0) move.power.toInt().toString() else "—"
         val acc = if (move.accuracy in 1.0..100.0) "${move.accuracy.toInt()}%" else "—"
         lines.add(Text.translatable("category.cobbliki_rei.move.stats", pow, acc, move.pp).formatted(Formatting.DARK_GRAY))

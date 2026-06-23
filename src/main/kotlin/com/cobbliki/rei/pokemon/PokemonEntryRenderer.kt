@@ -38,7 +38,7 @@ object PokemonEntryRenderer : EntryRenderer<PokemonForm> {
         val form = entry.value ?: return null
         val formName = if (form.aspects.isEmpty()) null
         else form.species.forms.firstOrNull { it.aspects.toSet() == form.aspects }?.name?.takeIf { it.isNotBlank() }
-        val title = if (formName != null) Text.literal("${form.species.translatedName.string} ($formName)") else form.species.translatedName
+        val title = if (formName != null) Text.empty().append(form.species.translatedName).append(" ($formName)") else form.species.translatedName
         return Tooltip.create(title, Text.literal("#%04d".format(form.species.nationalPokedexNumber)).formatted(Formatting.GRAY))
     }
 }

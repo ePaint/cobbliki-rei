@@ -2,7 +2,7 @@ package com.cobbliki.rei.category
 
 import com.cobbliki.rei.Categories
 import com.cobbliki.rei.display.MegaDisplay
-import com.cobbliki.rei.nameLabel
+import com.cobbliki.rei.nameLabels
 import com.cobbliki.rei.pokemonWidget
 import me.shedaniel.math.Point
 import me.shedaniel.math.Rectangle
@@ -27,11 +27,11 @@ class MegaCategory : DisplayCategory<MegaDisplay> {
         val w = mutableListOf<Widget>()
         w.add(Widgets.createRecipeBase(bounds))
         w.add(Widgets.createSlot(Point(bounds.x + 6, bounds.y + 24)).entry(EntryStacks.of(display.stone)).markInput())
-        w.add(pokemonWidget(display.base, bounds.x + 28, bounds.y + 6, 44))
-        w.add(nameLabel(display.base, bounds.x + 50, bounds.y + 52))
+        w.add(pokemonWidget(display.species, bounds.x + 28, bounds.y + 6, 44, display.baseAspects))
+        w.addAll(nameLabels(display.species, display.baseAspects, bounds.x + 50, bounds.y + 52, 80))
         w.add(Widgets.createArrow(Point(bounds.x + 76, bounds.y + 22)))
-        w.add(pokemonWidget(display.base, bounds.x + 104, bounds.y + 6, 44, setOf(display.aspect)))
-        w.add(Widgets.createLabel(Point(bounds.x + 126, bounds.y + 52), Text.literal(display.megaForme)).noShadow().color(0xF06292))
+        w.add(pokemonWidget(display.species, bounds.x + 104, bounds.y + 6, 44, display.resultAspects))
+        w.addAll(nameLabels(display.species, display.resultAspects, bounds.x + 126, bounds.y + 52, 80, 0xF06292))
         return w
     }
 }

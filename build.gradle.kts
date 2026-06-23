@@ -39,7 +39,13 @@ dependencies {
 
     modImplementation("com.cobblemon:fabric:$cobblemonVersion")
     modImplementation("me.shedaniel:RoughlyEnoughItems-fabric:$reiVersion")
+
+    testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+tasks.test { useJUnitPlatform() }
 
 tasks.processResources {
     inputs.property("version", modVersion)

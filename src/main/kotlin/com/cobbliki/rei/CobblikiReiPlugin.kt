@@ -1,6 +1,7 @@
 package com.cobbliki.rei
 
 import com.cobbliki.rei.category.BuyCategory
+import com.cobbliki.rei.category.DexCategory
 import com.cobbliki.rei.category.DropsCategory
 import com.cobbliki.rei.category.EvoCategory
 import com.cobbliki.rei.category.EvoItemCategory
@@ -13,6 +14,8 @@ import com.cobbliki.rei.category.MegaCategory
 import com.cobbliki.rei.category.MtCategory
 import com.cobbliki.rei.category.PastureCategory
 import com.cobbliki.rei.category.SellCategory
+import com.cobbliki.rei.category.TrainerCategory
+import com.cobbliki.rei.data.DexData
 import com.cobbliki.rei.data.EconomyData
 import com.cobbliki.rei.data.EvolutionData
 import com.cobbliki.rei.data.FossilData
@@ -20,7 +23,9 @@ import com.cobbliki.rei.data.MegaData
 import com.cobbliki.rei.data.MoveLearnerIndex
 import com.cobbliki.rei.data.PastureConfig
 import com.cobbliki.rei.data.PokemonData
-import com.cobbliki.rei.display.BuyDisplay
+import com.cobbliki.rei.data.TrainerData
+import com.cobbliki.rei.display.BuyGenerator
+import com.cobbliki.rei.display.DexDisplay
 import com.cobbliki.rei.display.DropsDisplay
 import com.cobbliki.rei.display.EvoItemDisplay
 import com.cobbliki.rei.display.FossilDisplay
@@ -29,7 +34,8 @@ import com.cobbliki.rei.display.MegaDisplay
 import com.cobbliki.rei.display.MoveDetailDisplay
 import com.cobbliki.rei.display.MtDisplay
 import com.cobbliki.rei.display.PastureDisplay
-import com.cobbliki.rei.display.SellDisplay
+import com.cobbliki.rei.display.SellGenerator
+import com.cobbliki.rei.display.TrainerDropDisplay
 import com.cobbliki.rei.currency.CurrencyEntryDefinition
 import com.cobbliki.rei.currency.CurrencyEntryType
 import com.cobbliki.rei.move.MoveEntryDefinition
@@ -77,6 +83,7 @@ class CobblikiReiPlugin : REIClientPlugin {
     }
 
     override fun registerCategories(registry: CategoryRegistry) {
+        registry.add(DexCategory())
         registry.add(DropsCategory())
         registry.add(MtCategory())
         registry.add(LearnersCategory())
@@ -97,11 +104,14 @@ class CobblikiReiPlugin : REIClientPlugin {
             registry.add(BuyCategory())
             registry.add(SellCategory())
         }
+        if (TrainerData.present) registry.add(TrainerCategory())
     }
 
     override fun registerDisplays(registry: DisplayRegistry) {
         val mons = PokemonData.all()
         mons.forEach { info ->
+            registry.add(DexDisplay(info.species, 0, null))
+            DexData.spawnPages(info.species).forEachIndexed { i, page -> registry.add(DexDisplay(info.species, i + 1, page)) }
             if (info.drops.isNotEmpty()) registry.add(DropsDisplay(info.species, info.drops))
             val formSets = (listOf(emptySet<String>()) + info.species.forms.map { it.aspects.toSet() }.filter { it.isNotEmpty() }).distinct()
             formSets.forEach { aspects ->
@@ -117,7 +127,7 @@ class CobblikiReiPlugin : REIClientPlugin {
         EvolutionData.entries().forEach { registry.add(EvoItemDisplay(it.from, it.fromAspects, it.to, it.toAspects, it.item, it.method)) }
         FossilData.entries().forEach { registry.add(FossilDisplay(it.ingredients, it.result, it.aspects)) }
         if (MegaData.present)
-            MegaData.entries().forEach { registry.add(MegaDisplay(it.stone, it.base, it.megaForme, it.aspect)) }
+            MegaData.entries().forEach { registry.add(MegaDisplay(it.stone, it.species, it.baseAspects, it.resultAspects, it.resultName)) }
         if (PastureConfig.present) {
             val blacklist = PastureConfig.blacklist()
             val chance = PastureConfig.dropChancePerMinute()
@@ -127,9 +137,10 @@ class CobblikiReiPlugin : REIClientPlugin {
             }
         }
         if (EconomyData.present) {
-            EconomyData.buyOffers().forEach { registry.add(BuyDisplay(it.stack, it.price, it.category)) }
-            EconomyData.sellOffers().forEach { registry.add(SellDisplay(it.stack, it.price)) }
+            registry.registerDisplayGenerator(Categories.BUY, BuyGenerator)
+            registry.registerDisplayGenerator(Categories.SELL, SellGenerator)
         }
+        if (TrainerData.present) TrainerData.entries().forEach { registry.add(TrainerDropDisplay(it)) }
     }
 
     private fun item(id: String) = Registries.ITEM.get(Identifier.of(id))

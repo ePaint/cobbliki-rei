@@ -2,6 +2,7 @@ package com.cobbliki.rei
 
 import com.cobbliki.rei.data.DropInfo
 import com.cobbliki.rei.display.BuyDisplay
+import com.cobbliki.rei.display.DexDisplay
 import com.cobbliki.rei.display.DropsDisplay
 import com.cobbliki.rei.display.EvoItemDisplay
 import com.cobbliki.rei.display.FossilDisplay
@@ -11,6 +12,7 @@ import com.cobbliki.rei.display.MoveDetailDisplay
 import com.cobbliki.rei.display.MtDisplay
 import com.cobbliki.rei.display.PastureDisplay
 import com.cobbliki.rei.display.SellDisplay
+import com.cobbliki.rei.display.TrainerDropDisplay
 import me.shedaniel.rei.api.common.category.CategoryIdentifier
 import net.minecraft.item.ItemStack
 import net.minecraft.registry.Registries
@@ -28,6 +30,8 @@ object Categories {
     val FOSSIL: CategoryIdentifier<FossilDisplay> = CategoryIdentifier.of(CobblikiRei.MOD_ID, "fossil")
     val BUY: CategoryIdentifier<BuyDisplay> = CategoryIdentifier.of(CobblikiRei.MOD_ID, "buy")
     val SELL: CategoryIdentifier<SellDisplay> = CategoryIdentifier.of(CobblikiRei.MOD_ID, "sell")
+    val TRAINER: CategoryIdentifier<TrainerDropDisplay> = CategoryIdentifier.of(CobblikiRei.MOD_ID, "trainer")
+    val DEX: CategoryIdentifier<DexDisplay> = CategoryIdentifier.of(CobblikiRei.MOD_ID, "dex")
 }
 
 object Money {

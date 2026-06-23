@@ -3,7 +3,7 @@ package com.cobbliki.rei.category
 import com.cobbliki.rei.Categories
 import com.cobbliki.rei.arrow
 import com.cobbliki.rei.display.EvoItemDisplay
-import com.cobbliki.rei.nameLabel
+import com.cobbliki.rei.nameLabels
 import com.cobbliki.rei.pokemonWidget
 import me.shedaniel.math.Point
 import me.shedaniel.math.Rectangle
@@ -28,11 +28,11 @@ class EvoItemCategory : DisplayCategory<EvoItemDisplay> {
         val w = mutableListOf<Widget>()
         w.add(Widgets.createRecipeBase(bounds))
         w.add(pokemonWidget(display.from, bounds.x + 6, bounds.y + 6, 44, display.fromAspects))
-        w.add(nameLabel(display.from, bounds.x + 28, bounds.y + 52))
+        w.addAll(nameLabels(display.from, display.fromAspects, bounds.x + 28, bounds.y + 52, 64))
         display.item?.let { w.add(Widgets.createSlot(Point(bounds.x + 66, bounds.y + 10)).entry(EntryStacks.of(it)).markInput()) }
         w.add(arrow(bounds.x + 75, bounds.y + 34))
         w.add(pokemonWidget(display.to, bounds.x + 110, bounds.y + 6, 44, display.toAspects))
-        w.add(nameLabel(display.to, bounds.x + 132, bounds.y + 52))
+        w.addAll(nameLabels(display.to, display.toAspects, bounds.x + 132, bounds.y + 52, 64))
         return w
     }
 }

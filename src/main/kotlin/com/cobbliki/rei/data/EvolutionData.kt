@@ -3,6 +3,7 @@ package com.cobbliki.rei.data
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
 import com.cobblemon.mod.common.pokemon.Species
 import net.minecraft.item.ItemStack
+import net.minecraft.item.Items
 import net.minecraft.registry.Registries
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
@@ -19,11 +20,26 @@ data class EvoEntry(
 object EvolutionData {
     private val KNOWN = setOf("item", "trade", "friendship", "levelup")
 
+    // SANCTIONED HARDCODE (see rei-mod/CLAUDE.md): LumyMon toggles these forms via a right-click
+    // item-interaction in compiled code, exposing NO data file or registry to read. The link only
+    // exists in code + tooltip prose, so there is nothing to ingest. Keep in sync with LumyMon.
+    private val LUMY_FORM_ITEMS = listOf(
+        Triple("mewtwo", "lumymon:rocket_armor", "armored"),
+        Triple("lugia", "lumymon:shadow_soul_stone", "shadow"),
+    )
+
     fun entries(): List<EvoEntry> {
         val edges = SpeciesMovesIndex.evolutions()
         val cables = edges.filter { it.methodKey == "trade" && it.item == null }
             .map { it.copy(item = "cobblemon:link_cable", methodKey = "item", level = null) }
-        return (edges + cables).mapNotNull(::resolve).distinctBy(::keyOf)
+        return ((edges + cables).mapNotNull(::resolve) + lumyFormItems()).distinctBy(::keyOf)
+    }
+
+    private fun lumyFormItems(): List<EvoEntry> = LUMY_FORM_ITEMS.mapNotNull { (name, itemId, aspect) ->
+        val species = PokemonSpecies.getByName(name) ?: return@mapNotNull null
+        val item = Identifier.tryParse(itemId)?.let { Registries.ITEM.get(it) } ?: return@mapNotNull null
+        if (item == Items.AIR) return@mapNotNull null
+        EvoEntry(species, emptySet(), species, setOf(aspect), ItemStack(item), Text.translatable("category.cobbliki_rei.method.item"))
     }
 
     private fun resolve(e: EvoEdge): EvoEntry? {

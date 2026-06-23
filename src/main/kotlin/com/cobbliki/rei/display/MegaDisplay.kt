@@ -8,9 +8,15 @@ import me.shedaniel.rei.api.common.entry.EntryIngredient
 import me.shedaniel.rei.api.common.util.EntryStacks
 import net.minecraft.item.ItemStack
 
-class MegaDisplay(val stone: ItemStack, val base: Species, val megaForme: String, val aspect: String) : CobblikiDisplay() {
+class MegaDisplay(
+    val stone: ItemStack,
+    val species: Species,
+    val baseAspects: Set<String>,
+    val resultAspects: Set<String>,
+    val resultName: String,
+) : CobblikiDisplay() {
     override fun getInputEntries(): List<EntryIngredient> =
-        listOf(EntryIngredient.of(EntryStacks.of(stone)), PokemonEntryType.ingredient(base))
-    override fun getOutputEntries(): List<EntryIngredient> = listOf(PokemonEntryType.ingredient(base))
+        listOf(EntryIngredient.of(EntryStacks.of(stone)), PokemonEntryType.ingredient(species, baseAspects))
+    override fun getOutputEntries(): List<EntryIngredient> = listOf(PokemonEntryType.ingredient(species, resultAspects))
     override fun getCategoryIdentifier(): CategoryIdentifier<*> = Categories.MEGA
 }

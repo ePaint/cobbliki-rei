@@ -12,18 +12,18 @@ data class DropInfo(val item: Identifier, val min: Int, val max: Int, val percen
 data class MoveInfo(
     val id: String,
     val displayName: Text,
-    val type: String,
+    val typeName: Text,
     val typeIndex: Int,
     val power: Double,
     val accuracy: Double,
     val pp: Int,
-    val category: String,
+    val categoryName: Text,
     val description: Text,
 )
 
 fun moveInfoOf(id: String): MoveInfo {
-    val m = Moves.getByName(id) ?: return MoveInfo(id, Text.literal(id), "", 0, 0.0, 0.0, 0, "", Text.empty())
-    return MoveInfo(m.name, m.displayName, m.elementalType.displayName.string, m.elementalType.textureXMultiplier, m.power, m.accuracy, m.pp, m.damageCategory.displayName.string, m.description)
+    val m = Moves.getByName(id) ?: return MoveInfo(id, Text.literal(id), Text.empty(), 0, 0.0, 0.0, 0, Text.empty(), Text.empty())
+    return MoveInfo(m.name, m.displayName, m.elementalType.displayName, m.elementalType.textureXMultiplier, m.power, m.accuracy, m.pp, m.damageCategory.displayName, m.description)
 }
 
 data class PokemonInfo(

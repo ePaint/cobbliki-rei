@@ -18,6 +18,8 @@ data class SellOffer(val stack: ItemStack, val price: BigInteger)
 object EconomyData {
     val present: Boolean get() = FabricLoader.getInstance().isModLoaded("cobbledollars")
 
+    private val merchantOffers by lazy { MerchantShopIndex.offers() }
+
     private fun config(name: String): JsonObject? {
         val f = FabricLoader.getInstance().configDir.resolve("cobbledollars").resolve(name)
         if (!f.exists()) return null
@@ -30,6 +32,19 @@ object EconomyData {
     }
 
     fun buyOffers(): List<BuyOffer> {
+        val global = LiveShop.buyOffers().ifEmpty(::fileBuyOffers)
+        val seen = HashSet<Triple<String, BigInteger, String>>()
+        val out = ArrayList<BuyOffer>()
+        for (o in global + merchantOffers) {
+            val id = Registries.ITEM.getId(o.stack.item).toString()
+            if (seen.add(Triple(id, o.price, o.category))) out.add(o)
+        }
+        return out
+    }
+
+    fun sellOffers(): List<SellOffer> = LiveShop.sellOffers().ifEmpty(::fileSellOffers)
+
+    private fun fileBuyOffers(): List<BuyOffer> {
         val shop = config("default_shop.json")?.getAsJsonArray("defaultShop") ?: return emptyList()
         val out = ArrayList<BuyOffer>()
         for (catEl in shop) {
@@ -45,7 +60,7 @@ object EconomyData {
         return out
     }
 
-    fun sellOffers(): List<SellOffer> {
+    private fun fileSellOffers(): List<SellOffer> {
         val bank = config("bank.json")?.getAsJsonArray("bank") ?: return emptyList()
         return bank.mapNotNull { oEl ->
             val o = oEl.asJsonObject
