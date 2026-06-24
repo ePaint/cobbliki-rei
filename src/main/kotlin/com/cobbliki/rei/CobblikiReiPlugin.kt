@@ -15,7 +15,6 @@ import com.cobbliki.rei.category.MtCategory
 import com.cobbliki.rei.category.PastureCategory
 import com.cobbliki.rei.category.SellCategory
 import com.cobbliki.rei.category.TrainerCategory
-import com.cobbliki.rei.data.DexData
 import com.cobbliki.rei.data.EconomyData
 import com.cobbliki.rei.data.EvolutionData
 import com.cobbliki.rei.data.FossilData
@@ -25,7 +24,7 @@ import com.cobbliki.rei.data.PastureConfig
 import com.cobbliki.rei.data.PokemonData
 import com.cobbliki.rei.data.TrainerData
 import com.cobbliki.rei.display.BuyGenerator
-import com.cobbliki.rei.display.DexDisplay
+import com.cobbliki.rei.display.DexGenerator
 import com.cobbliki.rei.display.DropsDisplay
 import com.cobbliki.rei.display.EvoItemDisplay
 import com.cobbliki.rei.display.FossilDisplay
@@ -113,8 +112,6 @@ class CobblikiReiPlugin : REIClientPlugin {
             if (info.drops.isNotEmpty()) registry.add(DropsDisplay(info.species, info.drops))
             val formSets = (listOf(emptySet<String>()) + info.species.forms.map { it.aspects.toSet() }.filter { it.isNotEmpty() }).distinct()
             formSets.forEach { aspects ->
-                registry.add(DexDisplay(info.species, aspects, 0, null))
-                DexData.spawnPages(info.species, aspects).forEachIndexed { i, page -> registry.add(DexDisplay(info.species, aspects, i + 1, page)) }
                 val m = PokemonData.movesOf(info.species, aspects)
                 (m.tm + m.tutor + m.egg).distinctBy { it.id }.chunked(MT_PAGE_SIZE)
                     .forEach { page -> registry.add(MtDisplay(info.species, aspects, page)) }
@@ -136,6 +133,7 @@ class CobblikiReiPlugin : REIClientPlugin {
                 if (pd.isNotEmpty()) registry.add(PastureDisplay(info.species, pd, chance))
             }
         }
+        registry.registerDisplayGenerator(Categories.DEX, DexGenerator)
         if (EconomyData.present) {
             registry.registerDisplayGenerator(Categories.BUY, BuyGenerator)
             registry.registerDisplayGenerator(Categories.SELL, SellGenerator)
