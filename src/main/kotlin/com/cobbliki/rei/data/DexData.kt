@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.api.pokemon.stats.Stats
 import com.cobblemon.mod.common.api.riding.RidingStyle
 import com.cobblemon.mod.common.api.riding.stats.RidingStat
 import com.cobblemon.mod.common.api.types.ElementalType
+import com.cobblemon.mod.common.pokemon.FormData
 import com.cobblemon.mod.common.pokemon.Species
 import com.cobblemon.mod.common.pokemon.abilities.HiddenAbility
 import net.minecraft.text.Text
@@ -40,26 +41,30 @@ private val RIDE_STAT_ORDER = listOf(
 )
 
 object DexData {
-    fun bioOf(s: Species): DexBio = DexBio(
-        dex = s.nationalPokedexNumber,
-        types = s.types.map { it.displayName to it.textureXMultiplier },
-        primaryType = s.primaryType,
-        secondaryType = s.secondaryType,
-        abilities = abilitiesOf(s),
-        baseStats = STAT_ORDER.map { it.displayName to (s.baseStats[it] ?: 0) },
-        eggGroups = s.eggGroups.map { eggLabel(it.showdownID) },
-        catchRate = s.catchRate,
-        baseExp = s.baseExperienceYield,
-        friendship = s.baseFriendship,
-        genderKey = genderKey(s.maleRatio),
-        height = s.height,
-        weight = s.weight,
-    )
+    fun bioOf(s: Species, aspects: Set<String>): DexBio {
+        val f = s.getForm(aspects)
+        return DexBio(
+            dex = s.nationalPokedexNumber,
+            types = f.types.map { it.displayName to it.textureXMultiplier },
+            primaryType = f.primaryType,
+            secondaryType = f.secondaryType,
+            abilities = abilitiesOf(f),
+            baseStats = STAT_ORDER.map { it.displayName to (f.baseStats[it] ?: 0) },
+            eggGroups = f.eggGroups.map { eggLabel(it.showdownID) },
+            catchRate = f.catchRate,
+            baseExp = f.baseExperienceYield,
+            friendship = f.baseFriendship,
+            genderKey = genderKey(f.maleRatio),
+            height = f.height,
+            weight = f.weight,
+        )
+    }
 
-    fun spawnsOf(s: Species): List<SpawnInfo> = SpawnIndex[s.name]
+    fun spawnsOf(s: Species, aspects: Set<String>): List<SpawnInfo> =
+        SpawnIndex[s.name].filter { it.aspects == aspects }
 
-    fun rideOf(s: Species): RideInfo? {
-        val r = s.riding
+    fun rideOf(f: FormData): RideInfo? {
+        val r = f.riding
         val behaviours = r.behaviours ?: return null
         if (behaviours.isEmpty()) return null
         val styles = behaviours.entries.map { (style, settings) ->
@@ -68,16 +73,16 @@ object DexData {
         return RideInfo(styles, r.seats.size)
     }
 
-    fun spawnPages(s: Species): List<DexPage> {
-        val bio = bioOf(s)
+    fun spawnPages(s: Species, aspects: Set<String>): List<DexPage> {
+        val bio = bioOf(s, aspects)
         val pages = mutableListOf<DexPage>(AbilityPage(bio.abilities, bio))
-        rideOf(s)?.let { pages.add(RidePage(it)) }
-        spawnsOf(s).chunked(SPAWN_PER_PAGE).forEach { pages.add(SpawnPage(it)) }
+        rideOf(s.getForm(aspects))?.let { pages.add(RidePage(it)) }
+        spawnsOf(s, aspects).chunked(SPAWN_PER_PAGE).forEach { pages.add(SpawnPage(it)) }
         return pages
     }
 
-    private fun abilitiesOf(s: Species): List<AbilityInfo> =
-        s.abilities.groupBy { it.template.displayName }.values.map { group ->
+    private fun abilitiesOf(f: FormData): List<AbilityInfo> =
+        f.abilities.groupBy { it.template.displayName }.values.map { group ->
             val a = group.first()
             AbilityInfo(
                 name = Text.translatable(a.template.displayName),

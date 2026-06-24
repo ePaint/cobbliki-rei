@@ -7,12 +7,10 @@ import com.cobbliki.rei.pokemon.PokemonEntryType
 import me.shedaniel.rei.api.common.category.CategoryIdentifier
 import me.shedaniel.rei.api.common.entry.EntryIngredient
 
-class DexDisplay(val species: Species, val page: Int, val payload: DexPage?) : CobblikiDisplay() {
+class DexDisplay(val species: Species, val aspects: Set<String>, val page: Int, val payload: DexPage?) : CobblikiDisplay() {
     override fun getInputEntries(): List<EntryIngredient> = emptyList()
 
-    override fun getOutputEntries(): List<EntryIngredient> =
-        (listOf(emptySet<String>()) + species.forms.map { it.aspects.toSet() }.filter { it.isNotEmpty() })
-            .distinct().map { PokemonEntryType.ingredient(species, it) }
+    override fun getOutputEntries(): List<EntryIngredient> = listOf(PokemonEntryType.ingredient(species, aspects))
 
     override fun getCategoryIdentifier(): CategoryIdentifier<*> = Categories.DEX
 }

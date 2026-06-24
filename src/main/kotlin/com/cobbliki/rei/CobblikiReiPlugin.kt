@@ -110,11 +110,11 @@ class CobblikiReiPlugin : REIClientPlugin {
     override fun registerDisplays(registry: DisplayRegistry) {
         val mons = PokemonData.all()
         mons.forEach { info ->
-            registry.add(DexDisplay(info.species, 0, null))
-            DexData.spawnPages(info.species).forEachIndexed { i, page -> registry.add(DexDisplay(info.species, i + 1, page)) }
             if (info.drops.isNotEmpty()) registry.add(DropsDisplay(info.species, info.drops))
             val formSets = (listOf(emptySet<String>()) + info.species.forms.map { it.aspects.toSet() }.filter { it.isNotEmpty() }).distinct()
             formSets.forEach { aspects ->
+                registry.add(DexDisplay(info.species, aspects, 0, null))
+                DexData.spawnPages(info.species, aspects).forEachIndexed { i, page -> registry.add(DexDisplay(info.species, aspects, i + 1, page)) }
                 val m = PokemonData.movesOf(info.species, aspects)
                 (m.tm + m.tutor + m.egg).distinctBy { it.id }.chunked(MT_PAGE_SIZE)
                     .forEach { page -> registry.add(MtDisplay(info.species, aspects, page)) }

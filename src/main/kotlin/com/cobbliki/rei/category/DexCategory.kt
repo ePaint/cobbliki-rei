@@ -13,6 +13,7 @@ import com.cobbliki.rei.data.SpawnPage
 import com.cobbliki.rei.data.TypeChartIndex
 import com.cobbliki.rei.data.prettyResource
 import com.cobbliki.rei.display.DexDisplay
+import com.cobbliki.rei.formText
 import com.cobbliki.rei.nameLabels
 import com.cobbliki.rei.pokemonWidget
 import me.shedaniel.math.Point
@@ -47,8 +48,8 @@ class DexCategory : DisplayCategory<DexDisplay> {
         w.add(Widgets.createRecipeBase(bounds))
         when (val p = display.payload) {
             null -> {
-                w.add(pokemonWidget(display.species, bounds.x + PAD, bounds.y + PAD, MODEL))
-                w.addAll(nameLabels(display.species, emptySet(), bounds.x + PAD + MODEL / 2, bounds.y + MODEL + 10, MODEL + 8))
+                w.add(pokemonWidget(display.species, bounds.x + PAD, bounds.y + PAD, MODEL, display.aspects))
+                w.addAll(nameLabels(display.species, display.aspects, bounds.x + PAD + MODEL / 2, bounds.y + MODEL + 10, MODEL + 8))
                 headerSection(display, bounds, w)
             }
             is AbilityPage -> abilitySection(p, bounds, w, compactHeader(display, bounds, "category.cobbliki_rei.dex.abilities", w))
@@ -60,13 +61,13 @@ class DexCategory : DisplayCategory<DexDisplay> {
 
     private fun compactHeader(display: DexDisplay, bounds: Rectangle, sectionKey: String, w: MutableList<Widget>): Int {
         val left = bounds.x + PAD
-        w.add(label(left, bounds.y + PAD, display.species.translatedName, 0xFFFFFF))
+        w.add(label(left, bounds.y + PAD, formText(display.species, display.aspects), 0xFFFFFF))
         w.add(label(bounds.x + WIDTH - PAD, bounds.y + PAD, Text.translatable(sectionKey), 0x8FA0B0, right = true))
         return bounds.y + PAD + ROW + 4
     }
 
     private fun headerSection(display: DexDisplay, bounds: Rectangle, w: MutableList<Widget>) {
-        val bio = DexData.bioOf(display.species)
+        val bio = DexData.bioOf(display.species, display.aspects)
         val tx = bounds.x + PAD + MODEL + 8
         val dex = Text.literal("#%04d".format(bio.dex))
         val hy = bounds.y + PAD + 2
@@ -80,7 +81,7 @@ class DexCategory : DisplayCategory<DexDisplay> {
             w.add(label(bounds.x + WIDTH - PAD, y, Text.literal(value.toString()), 0xE0E0E0, right = true))
             y += ROW
         }
-        if (DexData.spawnsOf(display.species).isEmpty()) {
+        if (DexData.spawnsOf(display.species, display.aspects).isEmpty()) {
             y += 4
             w.add(label(bounds.x + PAD, y, Text.translatable("category.cobbliki_rei.dex.no_spawn"), 0x8A8A8A))
         }
