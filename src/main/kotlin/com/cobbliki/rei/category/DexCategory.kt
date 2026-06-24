@@ -1,8 +1,14 @@
 package com.cobbliki.rei.category
 
+import com.cobblemon.mod.common.api.types.ElementalType
 import com.cobbliki.rei.Categories
+import com.cobbliki.rei.data.AbilityInfo
+import com.cobbliki.rei.data.AbilityPage
+import com.cobbliki.rei.data.DexBio
 import com.cobbliki.rei.data.DexData
 import com.cobbliki.rei.data.SpawnInfo
+import com.cobbliki.rei.data.SpawnPage
+import com.cobbliki.rei.data.TypeChartIndex
 import com.cobbliki.rei.data.prettyResource
 import com.cobbliki.rei.display.DexDisplay
 import com.cobbliki.rei.nameLabels
@@ -19,7 +25,10 @@ import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 
 private const val WIDTH = 196
+private const val HEIGHT = 206
 private const val MODEL = 56
+private const val PAD = 6
+private const val ROW = 10
 
 class DexCategory : DisplayCategory<DexDisplay> {
     private val typeSheet = Identifier.of("cobblemon", "textures/gui/types_small.png")
@@ -28,66 +37,170 @@ class DexCategory : DisplayCategory<DexDisplay> {
     override fun getTitle(): Text = Text.translatable("category.cobbliki_rei.dex")
     override fun getIcon(): Renderer = com.cobbliki.rei.itemIcon("cobblemon:pokedex", "cobblemon:poke_ball")
     override fun getDisplayWidth(display: DexDisplay): Int = WIDTH
-    override fun getDisplayHeight(): Int = 150
+    override fun getDisplayHeight(): Int = HEIGHT
 
     override fun setupDisplay(display: DexDisplay, bounds: Rectangle): List<Widget> {
         val w = mutableListOf<Widget>()
         w.add(Widgets.createRecipeBase(bounds))
-        w.add(pokemonWidget(display.species, bounds.x + 6, bounds.y + 6, MODEL))
-        w.addAll(nameLabels(display.species, emptySet(), bounds.x + 6 + MODEL / 2, bounds.y + MODEL + 8, MODEL + 4))
-        val tx = bounds.x + MODEL + 14
-        if (display.isBio) bioSection(display, bounds, tx, w) else spawnSection(display.spawns!!, bounds, tx, w)
+        w.add(pokemonWidget(display.species, bounds.x + PAD, bounds.y + PAD, MODEL))
+        w.addAll(nameLabels(display.species, emptySet(), bounds.x + PAD + MODEL / 2, bounds.y + MODEL + 10, MODEL + 8))
+        when (val p = display.payload) {
+            null -> headerSection(display, bounds, w)
+            is AbilityPage -> abilitySection(p, bounds, w)
+            is SpawnPage -> spawnSection(p.spawns, bounds, w)
+        }
         return w
     }
 
-    private fun bioSection(display: DexDisplay, bounds: Rectangle, tx: Int, w: MutableList<Widget>) {
+    private fun headerSection(display: DexDisplay, bounds: Rectangle, w: MutableList<Widget>) {
         val bio = DexData.bioOf(display.species)
-        var y = bounds.y + 8
-        w.add(label(tx, y, Text.literal("#%04d".format(bio.dex)), 0xFFFFFF)); y += 11
-        val types = bio.types
-        w.add(typeIcons(tx, y, types)); y += 20
-        if (bio.abilities.isNotEmpty()) {
-            w.add(label(tx, y, Text.translatable("category.cobbliki_rei.dex.abilities"), 0x8FA0B0)); y += 10
-            bio.abilities.forEach { w.add(label(tx, y, it, 0xC9C9C9)); y += 9 }
-        }
-        var sy = bounds.y + 8
+        val tx = bounds.x + PAD + MODEL + 8
+        var hy = bounds.y + PAD + 2
+        w.add(label(tx, hy, Text.literal("#%04d".format(bio.dex)), 0xFFFFFF)); hy += ROW + 2
+        addTypes(bio, tx, hy, w)
+        var y = bounds.y + MODEL + 34
+        w.add(label(bounds.x + PAD, y, Text.translatable("category.cobbliki_rei.dex.stat_header"), 0x8FA0B0)); y += ROW + 2
         bio.baseStats.forEach { (name, value) ->
-            w.add(label(bounds.x + WIDTH - 6, sy, Text.translatable("category.cobbliki_rei.dex.stat", name, value), 0xB0B0B0, right = true)); sy += 9
+            w.add(label(bounds.x + PAD, y, name, 0xB0B0B0))
+            w.add(label(bounds.x + WIDTH - PAD, y, Text.literal(value.toString()), 0xE0E0E0, right = true))
+            y += ROW
         }
-        sy += 4
-        w.add(label(bounds.x + WIDTH - 6, sy, line("category.cobbliki_rei.dex.catch", bio.catchRate), 0x9AA0A6, right = true)); sy += 9
-        w.add(label(bounds.x + WIDTH - 6, sy, line("category.cobbliki_rei.dex.exp", bio.baseExp), 0x9AA0A6, right = true)); sy += 9
-        w.add(label(bounds.x + WIDTH - 6, sy, line("category.cobbliki_rei.dex.friendship", bio.friendship), 0x9AA0A6, right = true)); sy += 9
-        val ey = maxOf(y, bounds.y + 86)
-        w.add(label(tx, ey, Text.translatable("category.cobbliki_rei.dex.${bio.genderKey}"), 0x9AA0A6))
-        w.add(label(tx, ey + 9, Text.translatable("category.cobbliki_rei.dex.egg", bio.eggGroups.joinToString(", ").ifBlank { "—" }), 0x9AA0A6))
-        w.add(label(tx, ey + 18, Text.translatable("category.cobbliki_rei.dex.size", "%.1f".format(bio.height / 10f), "%.1f".format(bio.weight / 10f)), 0x9AA0A6))
-        if (DexData.spawnsOf(display.species).isEmpty())
-            w.add(label(tx, ey + 27, Text.translatable("category.cobbliki_rei.dex.no_spawn"), 0x8A8A8A))
+        if (DexData.spawnsOf(display.species).isEmpty()) {
+            y += 4
+            w.add(label(bounds.x + PAD, y, Text.translatable("category.cobbliki_rei.dex.no_spawn"), 0x8A8A8A))
+        }
     }
 
-    private fun spawnSection(spawns: List<SpawnInfo>, bounds: Rectangle, tx: Int, w: MutableList<Widget>) {
-        var y = bounds.y + 8
-        w.add(label(tx, y, Text.translatable("category.cobbliki_rei.dex.spawn"), 0xFFFFFF)); y += 11
-        val maxPx = bounds.x + WIDTH - 6 - tx
+    private fun addTypes(bio: DexBio, x: Int, y: Int, w: MutableList<Widget>) {
+        w.add(typeIcons(x, y, bio.types))
+        val cols = bio.types.size.coerceAtLeast(1)
+        w.add(Widgets.createTooltip(Rectangle(x, y, cols * 40, 18), matchupTooltip(bio.primaryType, bio.secondaryType)))
+    }
+
+    private fun matchupTooltip(primary: ElementalType, secondary: ElementalType?): List<Text> {
+        val ms = TypeChartIndex.matchups(primary, secondary)
+        val weak = ms.filter { it.multiplier > 1.0 }.sortedByDescending { it.multiplier }
+        val resist = ms.filter { it.multiplier in 0.01..0.99 }.sortedBy { it.multiplier }
+        val immune = ms.filter { it.multiplier == 0.0 }
+        val out = mutableListOf<Text>()
+        section("category.cobbliki_rei.dex.weak", weak, true)?.let { out.add(it) }
+        section("category.cobbliki_rei.dex.resist", resist, true)?.let { out.add(it) }
+        section("category.cobbliki_rei.dex.immune", immune, false)?.let { out.add(it) }
+        if (out.isEmpty()) out.add(Text.translatable("category.cobbliki_rei.dex.neutral"))
+        return out
+    }
+
+    private fun section(key: String, ms: List<com.cobbliki.rei.data.TypeMatch>, withMult: Boolean): Text? {
+        if (ms.isEmpty()) return null
+        val body = Text.empty()
+        ms.forEachIndexed { i, m ->
+            if (i > 0) body.append(Text.literal(", "))
+            body.append(m.attacking.displayName)
+            if (withMult) body.append(Text.literal(" ")).append(Text.translatable("category.cobbliki_rei.dex.mult", fmtMult(m.multiplier)))
+        }
+        return Text.empty().append(Text.translatable(key)).append(Text.literal(": ")).append(body)
+    }
+
+    private fun fmtMult(m: Double): String = if (m == m.toLong().toDouble()) m.toLong().toString() else m.toString()
+
+    private fun abilitySection(page: AbilityPage, bounds: Rectangle, w: MutableList<Widget>) {
+        val left = bounds.x + PAD
+        val maxPx = WIDTH - 2 * PAD
+        var y = bounds.y + MODEL + 26
+        w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.abilities"), 0x8FA0B0)); y += ROW + 1
+        page.abilities.forEach { ab ->
+            w.add(label(left, y, abilityName(ab), 0xFFFFFF)); y += ROW
+            wrap(ab.description.string, maxPx).forEach { ln ->
+                w.add(label(left + 4, y, Text.literal(ln), 0x9AA0A6)); y += ROW - 1
+            }
+            y += 3
+        }
+        y += 2
+        bioLines(page.bio).forEach { t ->
+            wrap(t.string, maxPx).forEach { ln -> w.add(label(left, y, Text.literal(ln), 0x9AA0A6)); y += ROW - 1 }
+        }
+    }
+
+    private fun abilityName(ab: AbilityInfo): Text {
+        if (!ab.hidden) return ab.name
+        return Text.empty().append(ab.name).append(Text.literal(" ")).append(Text.translatable("category.cobbliki_rei.dex.hidden"))
+    }
+
+    private fun bioLines(bio: DexBio): List<Text> = listOf(
+        line("category.cobbliki_rei.dex.catch", bio.catchRate),
+        line("category.cobbliki_rei.dex.exp", bio.baseExp),
+        line("category.cobbliki_rei.dex.friendship", bio.friendship),
+        Text.translatable("category.cobbliki_rei.dex.${bio.genderKey}"),
+        Text.translatable("category.cobbliki_rei.dex.egg", bio.eggGroups.joinToString(", ").ifBlank { "—" }),
+        Text.translatable("category.cobbliki_rei.dex.size", "%.1f".format(bio.height / 10f), "%.1f".format(bio.weight / 10f)),
+    )
+
+    private fun spawnSection(spawns: List<SpawnInfo>, bounds: Rectangle, w: MutableList<Widget>) {
+        val left = bounds.x + PAD
+        val maxPx = WIDTH - 2 * PAD
+        var y = bounds.y + MODEL + 26
+        w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.spawn"), 0xFFFFFF)); y += ROW + 1
         spawns.forEach { sp ->
             sp.aspects.takeIf { it.isNotEmpty() }?.let {
-                w.add(label(tx, y, Text.literal(it.joinToString(" ") { a -> a.replaceFirstChar(Char::uppercase) }), 0xC9A0E0)); y += 9
+                w.add(label(left, y, Text.literal(it.joinToString(" ") { a -> a.replaceFirstChar(Char::uppercase) }), 0xC9A0E0)); y += ROW
             }
             val meta = listOfNotNull(
                 Text.translatable("category.cobbliki_rei.dex.bucket.${sp.bucket.replace('-', '_')}").string,
                 sp.level?.let { Text.translatable("category.cobbliki_rei.dex.level", it).string },
-                sp.timeRange?.let { Text.translatable("category.cobbliki_rei.dex.time.$it").string },
+                sp.context?.let { Text.translatable("category.cobbliki_rei.dex.context.$it").string },
             ).joinToString(" · ")
-            w.add(label(tx, y, Text.literal(meta), 0xB0B0B0)); y += 9
-            val where = (sp.biomes.map { Text.translatable("category.cobbliki_rei.dex.biome", prettyResource(it)).string } +
-                sp.structures.map { Text.translatable("category.cobbliki_rei.dex.structure", prettyResource(it)).string })
-            where.forEach { line ->
-                wrap(line, maxPx).forEach { w.add(label(tx + 4, y, Text.literal(it), 0x9AA0A6)); y += 9 }
+            w.add(label(left, y, Text.literal(meta), 0xB0B0B0)); y += ROW
+            spawnLines(sp).forEach { t ->
+                wrap(t.string, maxPx - 4).forEach { ln -> w.add(label(left + 4, y, Text.literal(ln), 0x9AA0A6)); y += ROW - 1 }
             }
-            y += 3
+            y += 4
         }
     }
+
+    private fun spawnLines(sp: SpawnInfo): List<Text> {
+        val out = mutableListOf<Text>()
+        if (sp.structures.isNotEmpty())
+            out.add(joinList("category.cobbliki_rei.dex.structure", sp.structures))
+        if (sp.biomes.isNotEmpty())
+            out.add(joinList("category.cobbliki_rei.dex.biome", sp.biomes))
+        if (sp.dimensions.isNotEmpty())
+            out.add(joinList("category.cobbliki_rei.dex.dimension", sp.dimensions))
+        whenLine(sp)?.let { out.add(it) }
+        lightLine(sp)?.let { out.add(it) }
+        heightLine(sp)?.let { out.add(it) }
+        if (sp.neededNearbyBlocks.isNotEmpty())
+            out.add(joinList("category.cobbliki_rei.dex.nearby", sp.neededNearbyBlocks))
+        if (sp.neededBaseBlocks.isNotEmpty())
+            out.add(joinList("category.cobbliki_rei.dex.base", sp.neededBaseBlocks))
+        if (sp.bobberBait) out.add(Text.translatable("category.cobbliki_rei.dex.fishing"))
+        return out
+    }
+
+    private fun whenLine(sp: SpawnInfo): Text? {
+        val parts = mutableListOf<String>()
+        sp.timeRange?.let { parts.add(Text.translatable("category.cobbliki_rei.dex.time.$it").string) }
+        if (sp.isThundering == true) parts.add(Text.translatable("category.cobbliki_rei.dex.weather.thunder").string)
+        else if (sp.isRaining == true) parts.add(Text.translatable("category.cobbliki_rei.dex.weather.rain").string)
+        sp.moonPhase?.let { parts.add(Text.translatable("category.cobbliki_rei.dex.moon", it).string) }
+        if (sp.canSeeSky == false) parts.add(Text.translatable("category.cobbliki_rei.dex.underground").string)
+        if (parts.isEmpty()) return null
+        return Text.translatable("category.cobbliki_rei.dex.when", parts.joinToString(" · "))
+    }
+
+    private fun lightLine(sp: SpawnInfo): Text? {
+        val lo = sp.minLight ?: sp.minSkyLight
+        val hi = sp.maxLight ?: sp.maxSkyLight
+        if (lo == null && hi == null) return null
+        return Text.translatable("category.cobbliki_rei.dex.light", lo ?: 0, hi ?: 15)
+    }
+
+    private fun heightLine(sp: SpawnInfo): Text? {
+        if (sp.minY == null && sp.maxY == null) return null
+        return Text.translatable("category.cobbliki_rei.dex.height", sp.minY?.toString() ?: "?", sp.maxY?.toString() ?: "?")
+    }
+
+    private fun joinList(key: String, ids: List<String>): Text =
+        Text.translatable(key, ids.joinToString(", ") { prettyResource(it) })
 
     private fun typeIcons(x: Int, y: Int, types: List<Pair<Text, Int>>): Widget =
         Widgets.createDrawableWidget { ctx, _, _, _ ->
@@ -104,6 +217,7 @@ class DexCategory : DisplayCategory<DexDisplay> {
     private fun line(key: String, value: Int): Text = Text.translatable(key, value)
 
     private fun wrap(s: String, maxPx: Int): List<String> {
+        if (s.isBlank()) return emptyList()
         val font = MinecraftClient.getInstance().textRenderer
         if (font.getWidth(s) <= maxPx) return listOf(s)
         val lines = mutableListOf<String>()
@@ -114,6 +228,6 @@ class DexCategory : DisplayCategory<DexDisplay> {
             else cur = StringBuilder(tentative)
         }
         if (cur.isNotEmpty()) lines.add(cur.toString())
-        return lines.take(3)
+        return lines
     }
 }

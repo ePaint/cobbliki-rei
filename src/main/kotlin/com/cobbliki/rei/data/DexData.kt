@@ -1,13 +1,19 @@
 package com.cobbliki.rei.data
 
 import com.cobblemon.mod.common.api.pokemon.stats.Stats
+import com.cobblemon.mod.common.api.types.ElementalType
 import com.cobblemon.mod.common.pokemon.Species
+import com.cobblemon.mod.common.pokemon.abilities.HiddenAbility
 import net.minecraft.text.Text
+
+data class AbilityInfo(val name: Text, val description: Text, val hidden: Boolean)
 
 data class DexBio(
     val dex: Int,
     val types: List<Pair<Text, Int>>,
-    val abilities: List<Text>,
+    val primaryType: ElementalType,
+    val secondaryType: ElementalType?,
+    val abilities: List<AbilityInfo>,
     val baseStats: List<Pair<Text, Int>>,
     val eggGroups: List<String>,
     val catchRate: Int,
@@ -18,13 +24,19 @@ data class DexBio(
     val weight: Float,
 )
 
-const val SPAWN_PER_PAGE = 3
+sealed interface DexPage
+data class AbilityPage(val abilities: List<AbilityInfo>, val bio: DexBio) : DexPage
+data class SpawnPage(val spawns: List<SpawnInfo>) : DexPage
+
+const val SPAWN_PER_PAGE = 2
 
 object DexData {
     fun bioOf(s: Species): DexBio = DexBio(
         dex = s.nationalPokedexNumber,
         types = s.types.map { it.displayName to it.textureXMultiplier },
-        abilities = s.abilities.map { Text.translatable(it.template.displayName) },
+        primaryType = s.primaryType,
+        secondaryType = s.secondaryType,
+        abilities = abilitiesOf(s),
         baseStats = STAT_ORDER.map { it.displayName to (s.baseStats[it] ?: 0) },
         eggGroups = s.eggGroups.map { eggLabel(it.showdownID) },
         catchRate = s.catchRate,
@@ -37,14 +49,26 @@ object DexData {
 
     fun spawnsOf(s: Species): List<SpawnInfo> = SpawnIndex[s.name]
 
-    fun spawnPages(s: Species): List<List<SpawnInfo>> = spawnsOf(s).chunked(SPAWN_PER_PAGE)
+    fun spawnPages(s: Species): List<DexPage> {
+        val bio = bioOf(s)
+        val pages = mutableListOf<DexPage>(AbilityPage(bio.abilities, bio))
+        spawnsOf(s).chunked(SPAWN_PER_PAGE).forEach { pages.add(SpawnPage(it)) }
+        return pages
+    }
+
+    private fun abilitiesOf(s: Species): List<AbilityInfo> =
+        s.abilities.map {
+            AbilityInfo(
+                name = Text.translatable(it.template.displayName),
+                description = Text.translatable(it.template.description),
+                hidden = it is HiddenAbility,
+            )
+        }
 
     private fun genderKey(maleRatio: Float): String =
         if (maleRatio < 0f) "genderless" else "ratio"
 
-    private fun eggLabel(showdownId: String): String =
-        showdownId.replace('-', ' ').replace('_', ' ').split(' ')
-            .filter { it.isNotBlank() }.joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
+    private fun eggLabel(showdownId: String): String = prettyResource(showdownId)
 
     private val STAT_ORDER = listOf(
         Stats.HP, Stats.ATTACK, Stats.DEFENCE, Stats.SPECIAL_ATTACK, Stats.SPECIAL_DEFENCE, Stats.SPEED,

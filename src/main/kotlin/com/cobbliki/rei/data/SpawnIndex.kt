@@ -12,11 +12,29 @@ data class SpawnInfo(
     val bucket: String,
     val level: String?,
     val weight: Double,
+    val context: String?,
+    val presets: List<String>,
     val biomes: List<String>,
     val structures: List<String>,
+    val dimensions: List<String>,
     val timeRange: String?,
+    val moonPhase: String?,
+    val canSeeSky: Boolean?,
+    val isRaining: Boolean?,
+    val isThundering: Boolean?,
+    val minLight: Int?,
+    val maxLight: Int?,
     val minSkyLight: Int?,
     val maxSkyLight: Int?,
+    val minY: Int?,
+    val maxY: Int?,
+    val minDepth: Int?,
+    val maxDepth: Int?,
+    val neededNearbyBlocks: List<String>,
+    val neededBaseBlocks: List<String>,
+    val bobberBait: Boolean,
+    val fluidIsSource: Boolean?,
+    val labels: List<String>,
     val aspects: Set<String>,
 )
 
@@ -92,17 +110,41 @@ object SpawnIndex {
                 bucket = s.get("bucket")?.asString ?: "common",
                 level = s.get("level")?.asString,
                 weight = s.get("weight")?.asDouble ?: 0.0,
+                context = s.get("context")?.asString,
+                presets = strings(s, "presets"),
                 biomes = strings(c, "biomes"),
                 structures = strings(c, "structures"),
+                dimensions = strings(c, "dimensions"),
                 timeRange = c?.get("timeRange")?.asString,
-                minSkyLight = c?.get("minSkyLight")?.asInt,
-                maxSkyLight = c?.get("maxSkyLight")?.asInt,
+                moonPhase = c?.get("moonPhase")?.asString,
+                canSeeSky = c?.boolOrNull("canSeeSky"),
+                isRaining = c?.boolOrNull("isRaining"),
+                isThundering = c?.boolOrNull("isThundering"),
+                minLight = c?.intOrNull("minLight"),
+                maxLight = c?.intOrNull("maxLight"),
+                minSkyLight = c?.intOrNull("minSkyLight"),
+                maxSkyLight = c?.intOrNull("maxSkyLight"),
+                minY = c?.intOrNull("minY"),
+                maxY = c?.intOrNull("maxY"),
+                minDepth = c?.intOrNull("minDepth"),
+                maxDepth = c?.intOrNull("maxDepth"),
+                neededNearbyBlocks = strings(c, "neededNearbyBlocks"),
+                neededBaseBlocks = strings(c, "neededBaseBlocks"),
+                bobberBait = c?.has("bobberBait") == true,
+                fluidIsSource = c?.boolOrNull("fluidIsSource"),
+                labels = strings(c, "labels") + listOfNotNull(c?.get("label")?.asString),
                 aspects = tokens.drop(1).toSet(),
             )
             acc.getOrPut(speciesId) { LinkedHashSet() }.add(info)
         }
     }
 
-    private fun strings(c: JsonObject?, key: String): List<String> =
-        c?.getAsJsonArray(key)?.map { it.asString } ?: emptyList()
+    private fun strings(o: JsonObject?, key: String): List<String> =
+        o?.getAsJsonArray(key)?.map { it.asString } ?: emptyList()
+
+    private fun JsonObject.boolOrNull(key: String): Boolean? =
+        runCatching { get(key)?.asBoolean }.getOrNull()
+
+    private fun JsonObject.intOrNull(key: String): Int? =
+        runCatching { get(key)?.asInt }.getOrNull()
 }
