@@ -24,7 +24,8 @@ DEPENDENCIES = [
     ("s7N7AsqL", "optional"),   # CobbleDollars
     ("HU6mkUZs", "optional"),   # tmcraft
     ("SszvX85I", "optional"),   # Cobblemon: Mega Showdown
-    ("XP2jcAo0", "optional"),   # pastureLoot
+    ("XP2jcAo0", "optional"),   # Cobblemon Pasture Loot
+    ("lRwTUnD7", "optional"),   # Radical Cobblemon Trainers
 ]
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
