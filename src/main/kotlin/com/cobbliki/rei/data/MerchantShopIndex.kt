@@ -1,15 +1,16 @@
 package com.cobbliki.rei.data
 
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.client.MinecraftClient
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.nbt.NbtIo
 import net.minecraft.nbt.NbtList
 import net.minecraft.nbt.NbtSizeTracker
 import net.minecraft.registry.Registries
 import net.minecraft.util.Identifier
 import java.io.ByteArrayInputStream
-import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
@@ -22,7 +23,7 @@ object MerchantShopIndex {
     private fun build(): List<BuyOffer> {
         val dir = FabricLoader.getInstance().gameDir.resolve("datapacks")
         if (!Files.isDirectory(dir)) return emptyList()
-        val seen = HashSet<Triple<String, BigInteger, String>>()
+        val seen = HashSet<String>()
         val out = ArrayList<BuyOffer>()
         Files.newDirectoryStream(dir, "*.zip").use { zips ->
             for (zip in zips) runCatching { scanZip(zip, seen, out) }
@@ -30,7 +31,7 @@ object MerchantShopIndex {
         return out
     }
 
-    private fun scanZip(zip: Path, seen: MutableSet<Triple<String, BigInteger, String>>, out: MutableList<BuyOffer>) {
+    private fun scanZip(zip: Path, seen: MutableSet<String>, out: MutableList<BuyOffer>) {
         ZipInputStream(Files.newInputStream(zip)).use { zin ->
             var e = zin.nextEntry
             while (e != null) {
@@ -43,7 +44,7 @@ object MerchantShopIndex {
         }
     }
 
-    private fun scanStructure(bytes: ByteArray, seen: MutableSet<Triple<String, BigInteger, String>>, out: MutableList<BuyOffer>) {
+    private fun scanStructure(bytes: ByteArray, seen: MutableSet<String>, out: MutableList<BuyOffer>) {
         val root = NbtIo.readCompressed(ByteArrayInputStream(bytes), NbtSizeTracker.ofUnlimitedBytes())
         val entities = root.getList("entities", 10)
         for (i in 0 until entities.size) {
@@ -53,7 +54,7 @@ object MerchantShopIndex {
         }
     }
 
-    private fun readShop(categories: NbtList, seen: MutableSet<Triple<String, BigInteger, String>>, out: MutableList<BuyOffer>) {
+    private fun readShop(categories: NbtList, seen: MutableSet<String>, out: MutableList<BuyOffer>) {
         for (c in 0 until categories.size) {
             val cat = categories.getCompound(c)
             val name = cat.getString("Category")
@@ -61,16 +62,20 @@ object MerchantShopIndex {
             for (o in 0 until offers.size) {
                 val offer = offers.getCompound(o)
                 val item = offer.getCompound("Item")
-                val id = item.getString("id")
-                val stack = stackOf(id) ?: continue
+                val stack = stackOf(item) ?: continue
                 val price = offer.getString("Price").toBigIntegerOrNull() ?: continue
-                if (seen.add(Triple(id, price, name))) out.add(BuyOffer(stack, price, name))
+                if (seen.add(EconomyData.dedupKey(stack, price, name))) out.add(BuyOffer(stack, price, name))
             }
         }
     }
 
-    private fun stackOf(id: String): ItemStack? {
-        val item = Registries.ITEM.get(Identifier.tryParse(id) ?: return null)
-        return if (item == Items.AIR) null else ItemStack(item)
+    private fun stackOf(item: NbtCompound): ItemStack? {
+        val lookup = MinecraftClient.getInstance().world?.registryManager
+        if (lookup != null) {
+            val parsed = ItemStack.fromNbtOrEmpty(lookup, item)
+            if (!parsed.isEmpty) return parsed
+        }
+        val byId = Registries.ITEM.get(Identifier.tryParse(item.getString("id")) ?: return null)
+        return if (byId == Items.AIR) null else ItemStack(byId)
     }
 }

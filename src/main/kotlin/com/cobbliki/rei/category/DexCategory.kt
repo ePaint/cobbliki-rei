@@ -6,6 +6,8 @@ import com.cobbliki.rei.data.AbilityInfo
 import com.cobbliki.rei.data.AbilityPage
 import com.cobbliki.rei.data.DexBio
 import com.cobbliki.rei.data.DexData
+import com.cobbliki.rei.data.RideInfo
+import com.cobbliki.rei.data.RidePage
 import com.cobbliki.rei.data.SpawnInfo
 import com.cobbliki.rei.data.SpawnPage
 import com.cobbliki.rei.data.TypeChartIndex
@@ -29,6 +31,7 @@ private const val HEIGHT = 206
 private const val MODEL = 56
 private const val PAD = 6
 private const val ROW = 10
+private const val TYPE_ICON = 18
 
 class DexCategory : DisplayCategory<DexDisplay> {
     private val typeSheet = Identifier.of("cobblemon", "textures/gui/types_small.png")
@@ -42,22 +45,34 @@ class DexCategory : DisplayCategory<DexDisplay> {
     override fun setupDisplay(display: DexDisplay, bounds: Rectangle): List<Widget> {
         val w = mutableListOf<Widget>()
         w.add(Widgets.createRecipeBase(bounds))
-        w.add(pokemonWidget(display.species, bounds.x + PAD, bounds.y + PAD, MODEL))
-        w.addAll(nameLabels(display.species, emptySet(), bounds.x + PAD + MODEL / 2, bounds.y + MODEL + 10, MODEL + 8))
         when (val p = display.payload) {
-            null -> headerSection(display, bounds, w)
-            is AbilityPage -> abilitySection(p, bounds, w)
-            is SpawnPage -> spawnSection(p.spawns, bounds, w)
+            null -> {
+                w.add(pokemonWidget(display.species, bounds.x + PAD, bounds.y + PAD, MODEL))
+                w.addAll(nameLabels(display.species, emptySet(), bounds.x + PAD + MODEL / 2, bounds.y + MODEL + 10, MODEL + 8))
+                headerSection(display, bounds, w)
+            }
+            is AbilityPage -> abilitySection(p, bounds, w, compactHeader(display, bounds, "category.cobbliki_rei.dex.abilities", w))
+            is RidePage -> rideSection(p.ride, bounds, w, compactHeader(display, bounds, "category.cobbliki_rei.dex.ride", w))
+            is SpawnPage -> spawnSection(p.spawns, bounds, w, compactHeader(display, bounds, "category.cobbliki_rei.dex.spawn", w))
         }
         return w
+    }
+
+    private fun compactHeader(display: DexDisplay, bounds: Rectangle, sectionKey: String, w: MutableList<Widget>): Int {
+        val left = bounds.x + PAD
+        w.add(label(left, bounds.y + PAD, display.species.translatedName, 0xFFFFFF))
+        w.add(label(bounds.x + WIDTH - PAD, bounds.y + PAD, Text.translatable(sectionKey), 0x8FA0B0, right = true))
+        return bounds.y + PAD + ROW + 4
     }
 
     private fun headerSection(display: DexDisplay, bounds: Rectangle, w: MutableList<Widget>) {
         val bio = DexData.bioOf(display.species)
         val tx = bounds.x + PAD + MODEL + 8
-        var hy = bounds.y + PAD + 2
-        w.add(label(tx, hy, Text.literal("#%04d".format(bio.dex)), 0xFFFFFF)); hy += ROW + 2
-        addTypes(bio, tx, hy, w)
+        val dex = Text.literal("#%04d".format(bio.dex))
+        val hy = bounds.y + PAD + 2
+        w.add(label(tx, hy, dex, 0xFFFFFF))
+        val font = MinecraftClient.getInstance().textRenderer
+        addTypes(bio, tx + font.getWidth(dex) + 6, hy - (TYPE_ICON - 8) / 2, w)
         var y = bounds.y + MODEL + 34
         w.add(label(bounds.x + PAD, y, Text.translatable("category.cobbliki_rei.dex.stat_header"), 0x8FA0B0)); y += ROW + 2
         bio.baseStats.forEach { (name, value) ->
@@ -74,7 +89,7 @@ class DexCategory : DisplayCategory<DexDisplay> {
     private fun addTypes(bio: DexBio, x: Int, y: Int, w: MutableList<Widget>) {
         w.add(typeIcons(x, y, bio.types))
         val cols = bio.types.size.coerceAtLeast(1)
-        w.add(Widgets.createTooltip(Rectangle(x, y, cols * 40, 18), matchupTooltip(bio.primaryType, bio.secondaryType)))
+        w.add(Widgets.createTooltip(Rectangle(x, y, cols * (TYPE_ICON + 2), TYPE_ICON), matchupTooltip(bio.primaryType, bio.secondaryType)))
     }
 
     private fun matchupTooltip(primary: ElementalType, secondary: ElementalType?): List<Text> {
@@ -103,11 +118,10 @@ class DexCategory : DisplayCategory<DexDisplay> {
 
     private fun fmtMult(m: Double): String = if (m == m.toLong().toDouble()) m.toLong().toString() else m.toString()
 
-    private fun abilitySection(page: AbilityPage, bounds: Rectangle, w: MutableList<Widget>) {
+    private fun abilitySection(page: AbilityPage, bounds: Rectangle, w: MutableList<Widget>, top: Int) {
         val left = bounds.x + PAD
         val maxPx = WIDTH - 2 * PAD
-        var y = bounds.y + MODEL + 26
-        w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.abilities"), 0x8FA0B0)); y += ROW + 1
+        var y = top
         page.abilities.forEach { ab ->
             w.add(label(left, y, abilityName(ab), 0xFFFFFF)); y += ROW
             wrap(ab.description.string, maxPx).forEach { ln ->
@@ -135,11 +149,28 @@ class DexCategory : DisplayCategory<DexDisplay> {
         Text.translatable("category.cobbliki_rei.dex.size", "%.1f".format(bio.height / 10f), "%.1f".format(bio.weight / 10f)),
     )
 
-    private fun spawnSection(spawns: List<SpawnInfo>, bounds: Rectangle, w: MutableList<Widget>) {
+    private fun rideSection(ride: RideInfo, bounds: Rectangle, w: MutableList<Widget>, top: Int) {
+        val left = bounds.x + PAD
+        val right = bounds.x + WIDTH - PAD
+        var y = top
+        if (ride.seats > 0) {
+            w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.ride.seats", ride.seats), 0xB0B0B0)); y += ROW + 2
+        }
+        ride.styles.forEach { st ->
+            w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.ride.style.${st.style.name.lowercase()}"), 0x8FA0B0)); y += ROW + 1
+            st.stats.forEach { (stat, range) ->
+                w.add(label(left + 4, y, Text.translatable("category.cobbliki_rei.dex.ride.stat.${stat.name.lowercase()}"), 0xB0B0B0))
+                w.add(label(right, y, Text.literal("${range.first}–${range.last}"), 0xE0E0E0, right = true))
+                y += ROW
+            }
+            y += 4
+        }
+    }
+
+    private fun spawnSection(spawns: List<SpawnInfo>, bounds: Rectangle, w: MutableList<Widget>, top: Int) {
         val left = bounds.x + PAD
         val maxPx = WIDTH - 2 * PAD
-        var y = bounds.y + MODEL + 26
-        w.add(label(left, y, Text.translatable("category.cobbliki_rei.dex.spawn"), 0xFFFFFF)); y += ROW + 1
+        var y = top
         spawns.forEach { sp ->
             sp.aspects.takeIf { it.isNotEmpty() }?.let {
                 w.add(label(left, y, Text.literal(it.joinToString(" ") { a -> a.replaceFirstChar(Char::uppercase) }), 0xC9A0E0)); y += ROW
@@ -205,7 +236,7 @@ class DexCategory : DisplayCategory<DexDisplay> {
     private fun typeIcons(x: Int, y: Int, types: List<Pair<Text, Int>>): Widget =
         Widgets.createDrawableWidget { ctx, _, _, _ ->
             types.forEachIndexed { i, (_, col) ->
-                ctx.drawTexture(typeSheet, x + i * 40, y, 36, 18, (col * 18).toFloat(), 0f, 18, 18, 324, 18)
+                ctx.drawTexture(typeSheet, x + i * (TYPE_ICON + 2), y, TYPE_ICON, TYPE_ICON, (col * 18).toFloat(), 0f, 18, 18, 324, 18)
             }
         }
 

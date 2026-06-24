@@ -31,13 +31,15 @@ object EconomyData {
         return if (item == Items.AIR) null else ItemStack(item)
     }
 
+    fun dedupKey(stack: ItemStack, price: BigInteger, category: String): String =
+        "${Registries.ITEM.getId(stack.item)}|${stack.componentChanges}|$price|$category"
+
     fun buyOffers(): List<BuyOffer> {
         val global = LiveShop.buyOffers().ifEmpty(::fileBuyOffers)
-        val seen = HashSet<Triple<String, BigInteger, String>>()
+        val seen = HashSet<String>()
         val out = ArrayList<BuyOffer>()
         for (o in global + merchantOffers) {
-            val id = Registries.ITEM.getId(o.stack.item).toString()
-            if (seen.add(Triple(id, o.price, o.category))) out.add(o)
+            if (seen.add(dedupKey(o.stack, o.price, o.category))) out.add(o)
         }
         return out
     }

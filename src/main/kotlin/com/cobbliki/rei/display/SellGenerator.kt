@@ -18,8 +18,8 @@ object SellGenerator : DynamicDisplayGenerator<SellDisplay> {
 
     override fun getUsageFor(entry: EntryStack<*>): Optional<List<SellDisplay>> {
         if (entry.type != VanillaEntryTypes.ITEM) return Optional.empty()
-        val item = (entry.value as? ItemStack)?.item ?: return Optional.empty()
-        val matches = all().filter { it.stack.item == item }
+        val clicked = entry.value as? ItemStack ?: return Optional.empty()
+        val matches = all().filter { ItemStack.areItemsAndComponentsEqual(it.stack, clicked) }
         return if (matches.isEmpty()) Optional.empty() else Optional.of(matches)
     }
 }
